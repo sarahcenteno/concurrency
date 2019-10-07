@@ -1,0 +1,121 @@
+semaphore full = 1; 
+semaphore mutex = 1; 
+semaphore SIO = 0; 
+semaphore full2 = 5; 
+semaphore mutex2 = 1; 
+semaphore full3 = 1; 
+semaphore mutex3 = 1; 
+semaphore phyIO = 0; 
+semaphore ReqPend = 0; 
+semaphore ReqServ = 0;
+semaphore opComp = 0;
+
+int track = 0;
+int bufADDR = 0;
+int bufID = 0;
+int PIO = 0;
+int iorqID[5];
+int iorqADDR[5];
+int dID = 0;
+int dADDR = 0;
+int i, j, k, m, n;
+ 
+void user(){ 
+int userID = 1; 
+int i=0; 
+for (i=0;i<5;i++) { 
+track = random(20); 
+p(full);
+p(mutex); 
+bufID = userID;
+bufADDR = track;
+cout << "User " << userID << " executes system call SIO or DOIO" << endl;
+v(mutex); 
+v(SIO); 
+p(ReqServ);
+} 
+} 
+
+void DOIO(){ 
+int id = 0, addr = 0;
+for (j=0;j<5;j++) {
+p(SIO);
+p(mutex); 
+id = bufID;
+addr = bufADDR;
+v(mutex); 
+v(full); 
+p(full2); 
+p(mutex2); 
+iorqID[j] = id;
+iorqADDR[j] = addr;
+j = j+1;
+if (j==5) {
+j=0;
+}  
+cout << "DOIO assembles IORB and inserts it in IORQ" << endl;
+v(mutex2); 
+v(ReqPend); 
+} 
+}
+ 
+void deviceDriver(){ 
+for (k=0;k<5;k++) {
+p(ReqPend); 
+p(mutex2); 
+dID = iorqID[k];
+dADDR = iorqADDR[k]; 
+k = k+1;
+if (k==5) {
+k=0;
+}
+v(mutex2); 
+v(full2); 
+p(full3); 
+p(mutex3);
+PIO = dADDR; 
+v(mutex3); 
+v(phyIO); 
+cout << "Driver initiates I/O operations for user " << dID << endl; 
+p(opComp);
+v(ReqServ);
+cout << "Driver signal user " << dID << " (operation complete)" << endl;
+} 
+}
+ 
+void disk(){ 
+int seek = 0;
+for (m=0;m<5;m++) {
+p(phyIO); 
+p(mutex3); 
+seek = PIO; 
+v(mutex3); 
+v(full3); 
+for (n=0;n<seek;n++) {}
+cout << "Disk completes I/O operation (disk does not know what process initiated the I/O operation)" << endl; 
+v(opComp); 
+} 
+}
+ 
+main()
+{
+initialsem(full,1); 
+initialsem(full2,5); 
+initialsem(full3,1); 
+initialsem(mutex,1); 
+initialsem(mutex2,1); 
+initialsem(mutex3,1); 
+initialsem(SIO,0);
+initialsem(phyIO,0);
+initialsem(ReqServ,0);
+initialsem(ReqPend,0);
+initialsem(opComp,0);
+
+cobegin{ 
+user(); 
+DOIO(); 
+deviceDriver(); 
+disk(); 
+
+} 
+} 
